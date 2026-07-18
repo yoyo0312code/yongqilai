@@ -120,6 +120,14 @@
   .ai-out h4{margin:0 0 8px;font-size:13px;color:var(--brand2);}
   .ai-out .row{margin:4px 0;font-size:12px;}
   .ai-out .row b{color:var(--ink);}
+  .emoji-row{display:flex;align-items:center;gap:10px;margin-top:2px;}
+  .emoji-preview{font-size:30px;width:48px;height:48px;flex:0 0 48px;display:flex;
+    align-items:center;justify-content:center;background:#fff;border:1px solid var(--line);
+    border-radius:12px;}
+  .emoji-picker{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;max-height:132px;overflow-y:auto;}
+  .emoji-picker button{font-size:20px;width:40px;height:40px;border:1px solid var(--line);
+    background:#fff;border-radius:10px;cursor:pointer;line-height:1;}
+  .emoji-picker button:active{transform:scale(.9);}
 
   /* 底部导航 */
   nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
@@ -173,6 +181,14 @@
         <div class="field">
           <label>物品名称 *</label>
           <input id="add-name" placeholder="例如：颈部按摩仪">
+        </div>
+        <div class="field">
+          <label>物品图标（可自定义 emoji）</label>
+          <div class="emoji-row">
+            <div class="emoji-preview" id="emoji-preview">📦</div>
+            <input id="add-emoji" placeholder="点下方选，或粘贴任意 emoji" style="flex:1;">
+          </div>
+          <div class="emoji-picker" id="emoji-picker"></div>
         </div>
         <div class="field">
           <label>品牌 / 备注（可选）</label>
@@ -334,6 +350,8 @@ added.forEach(it=>items.push(it));
 
 const $=s=>document.querySelector(s);
 const todayStr=()=>new Date().toISOString().slice(0,10);
+// 统一取图标：自定义 emoji 优先，其次种子映射，再按分类兜底
+function getEmoji(it){return (it&&it.emoji)||EMOJI[it.id]||EMO[it.cat]||'📦';}
 
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),1600);}
@@ -356,7 +374,7 @@ function renderLib(){
     const pool=it.pool?POOLNAME[it.pool]:'';
     const d=document.createElement('div');d.className='item';
     d.innerHTML=`<div class="badge ${ch}">${chTxt}</div>
-      <div class="emo">${EMOJI[it.id]||EMO[it.cat]||'📦'}</div>
+      <div class="emo">${getEmoji(it)}</div>
       <div class="nm">${it.name}</div>
       <span class="tag">${it.cat}</span>${pool?`<div class="pool">${pool}</div>`:''}`;
     d.onclick=()=>openItem(it.id);
@@ -377,7 +395,7 @@ function openItem(id){
   const ch=it.channel==='both'?'每日提醒 + 轮盘抽签':it.channel==='reminder'?'仅每日提醒':'仅记录（枢纽类）';
   const used=checkins.filter(c=>c.id===id).length;
   $('#sheet').innerHTML=`
-    <h3>${EMOJI[it.id]||EMO[it.cat]||'📦'} ${it.name}</h3>
+    <h3>${getEmoji(it)} ${it.name}</h3>
     <div class="meta">${it.brand?it.brand+' · ':''}${it.cat} · 当前：${it.status||'—'} · 已用 ${used} 次</div>
     <div class="blk"><div class="h">🎯 使用场景（已深挖）</div><div class="s">${it.scenes.map(s=>'· '+s).join('<br>')}</div></div>
     <div class="blk"><div class="h">📅 建议频率</div><div class="s">${it.freq}</div></div>
@@ -482,7 +500,7 @@ function renderRem(){
   remItems.forEach(it=>{
     const done=checkins.some(c=>c.id===it.id&&c.date===todayStr());
     const d=document.createElement('div');d.className='rem';
-    d.innerHTML=`<div class="ico">${EMOJI[it.id]||EMO[it.cat]||'📦'}</div>
+    d.innerHTML=`<div class="ico">${getEmoji(it)}</div>
       <div class="body"><div class="t">${it.name}</div><div class="f">${it.freq}</div></div>
       <button class="do ${done?'done':''}" onclick="useItem(${it.id})">${done?'今日✓':'标记用'}</button>`;
     list.appendChild(d);
@@ -568,15 +586,29 @@ $('#save-btn').addEventListener('click',()=>{
   const a=JSON.parse($('#ai-out').dataset.an);
   const id=Math.max(0,...items.map(i=>i.id))+1;
   const cat=/笔|本|印|写|书|卡/.test(name)?'文具':/相机|音箱|手机|表|仪/.test(name)?'数码':/哑铃|球|瑜伽|拍/.test(name)?'运动':'养生';
+  const emoji=$('#add-emoji').value.trim();
   items.push({id,name,cat,brand:$('#add-brand').value.trim(),status:$('#add-status').value.trim()||'新增',
-    freq:a.freq,pool:a.pool,channel:$('#add-channel').value,scenes:a.scenes,action:a.action});
+    emoji:emoji||undefined,freq:a.freq,pool:a.pool,channel:$('#add-channel').value,scenes:a.scenes,action:a.action});
   if($('#add-channel').value!=='record'){
     added.push(items[items.length-1]);localStorage.setItem('added',JSON.stringify(added));
   }
   toast('已添加 ✓');
   $('#add-name').value='';$('#add-brand').value='';$('#add-status').value='';
+  $('#add-emoji').value='';$('#emoji-preview').textContent='📦';
   $('#ai-out').style.display='none';$('#assign-box').style.display='none';
   renderLib();buildPoolChips();drawWheel();renderTime();
+});
+
+/* ============ emoji 选择面板 ============ */
+const EMOJI_SET=['📦','🛍️','💡','🎁','🧸','🎈','📱','💻','⌚','🎧','📷','🔌','🪑','🛏️','🧴','🧼','💊','🩹','🌿','🍵','☕','🥤','🍎','🏃','🧘','🏋️','🤸','⚽','🏸','🎾','🎲','🎯','🎮','🧩','♟️','📚','✏️','🖊️','📓','🔖','🎤','🎸','🎹','📺','🚿','🪞','🧺','🧹','🔥','❄️','🌞','⭐','💆','🦶','🤲','🧠','👁️','🔫','🧣','👜'];
+const picker=$('#emoji-picker');
+EMOJI_SET.forEach(e=>{
+  const b=document.createElement('button');b.type='button';b.textContent=e;
+  b.onclick=()=>{$('#add-emoji').value=e;$('#emoji-preview').textContent=e;};
+  picker.appendChild(b);
+});
+$('#add-emoji').addEventListener('input',()=>{
+  $('#emoji-preview').textContent=($('#add-emoji').value.trim()||'📦');
 });
 
 /* ============ 时间线 / 日常 routine ============ */
@@ -601,7 +633,7 @@ function renderTime(){
     sec.innerHTML=`<span class="dot"></span><div class="tl">${label}</div>`;
     map[key].forEach(it=>{
       const c=document.createElement('div');c.className='titem';
-      c.innerHTML=`<span class="te">${EMOJI[it.id]||EMO[it.cat]||'📦'}</span><span class="tn">${it.name.replace(/^真不二 /,'')}</span>`;
+      c.innerHTML=`<span class="te">${getEmoji(it)}</span><span class="tn">${it.name.replace(/^真不二 /,'')}</span>`;
       c.onclick=()=>openItem(it.id);
       sec.appendChild(c);
     });

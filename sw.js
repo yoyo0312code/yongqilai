@@ -1,4 +1,4 @@
-const CACHE = 'yongqilai-v1';
+const CACHE = 'yongqilai-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -22,12 +22,26 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // 仅缓存同源 GET 请求；其余走网络
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  if (url.origin !== self.location.origin) return;
+
+  // 页面（导航 / .html）走「网络优先」：保证总能拿到最新版本，离线才回退缓存
+  if (e.request.mode === 'navigate' || url.pathname.endsWith('.html')) {
+    e.respondWith(
+      fetch(e.request).then((resp) => {
+        const copy = resp.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy));
+        return resp;
+      }).catch(() => caches.match(e.request).then((r) => r || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // 其余静态资源（字体 / 图标等）走缓存优先 + 动态补充
   e.respondWith(
     caches.match(e.request).then((r) => r || fetch(e.request).then((resp) => {
-      // 动态缓存其它同域资源（如字体已在 ASSETS 内）
-      if (resp && resp.ok && new URL(e.request.url).origin === self.location.origin) {
+      if (resp && resp.ok) {
         const copy = resp.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));
       }
