@@ -408,10 +408,11 @@ function openItem(id){
   $('#sheet').innerHTML=`
     <h3>${getEmoji(it)} ${it.name}</h3>
     <div class="meta">${it.brand?it.brand+' · ':''}${it.cat} · 当前：${it.status||'—'} · 已用 ${used} 次</div>
-    <div class="blk"><div class="h">🎯 使用场景（已深挖）</div><div class="s">${it.scenes.map(s=>'· '+s).join('<br>')}</div></div>
-    <div class="blk"><div class="h">📅 建议频率</div><div class="s">${it.freq}</div></div>
-    <div class="blk"><div class="h">💡 融入日常的动作</div><div class="s">${it.action}</div></div>
-    <div class="blk"><div class="h">🏷️ 通道分配</div><div class="s">抽签池：<b>${pool}</b> ｜ 通道：<b>${ch}</b></div></div>
+
+    <div class="acts" id="edit-del-row">
+      <button class="act-edit" onclick="toggleEdit(${id})">✏️ 修改</button>
+      <button class="act-del" onclick="deleteItem(${id})">🗑 删除物品</button>
+    </div>
 
     <div id="edit-panel" style="display:none;">
       <div class="blk">
@@ -434,18 +435,19 @@ function openItem(id){
         </div>
       </div>
     </div>
-
-    <div class="acts">
-      <button class="act-use" onclick="useItem(${id})">✓ 标记今天用了</button>
-      <button class="act-close" onclick="closeSheet()">关闭</button>
-    </div>
-    <div class="acts" id="edit-del-row" style="margin-top:10px;">
-      <button class="act-edit" onclick="toggleEdit(${id})">✏️ 修改</button>
-      <button class="act-del" onclick="deleteItem(${id})">🗑 删除物品</button>
-    </div>
     <div class="acts" id="edit-actions" style="display:none;margin-top:10px;">
       <button class="act-save" onclick="saveEdit(${id})">💾 保存</button>
       <button class="act-close" onclick="toggleEdit(${id})">取消</button>
+    </div>
+
+    <div class="blk"><div class="h">🎯 使用场景（已深挖）</div><div class="s">${it.scenes.map(s=>'· '+s).join('<br>')}</div></div>
+    <div class="blk"><div class="h">📅 建议频率</div><div class="s">${it.freq}</div></div>
+    <div class="blk"><div class="h">💡 融入日常的动作</div><div class="s">${it.action}</div></div>
+    <div class="blk"><div class="h">🏷️ 通道分配</div><div class="s">抽签池：<b>${pool}</b> ｜ 通道：<b>${ch}</b></div></div>
+
+    <div class="acts" style="margin-top:10px;">
+      <button class="act-use" onclick="useItem(${id})">✓ 标记今天用了</button>
+      <button class="act-close" onclick="closeSheet()">关闭</button>
     </div>`;
   $('#mask').classList.add('show');
 }
