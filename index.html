@@ -153,8 +153,10 @@
   .sheet .acts{display:flex;gap:10px;margin-top:6px;}
   .sheet .acts button{flex:1;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:600;}
   .act-use{background:var(--green);color:#fff;} .act-close{background:var(--line);color:var(--ink);}
-  .act-del{width:100%;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:600;
-    background:#E8C4C0;color:#9E4740;margin-top:10px;}
+  .act-edit{background:var(--brand2);color:#fff;}
+  .act-save{background:var(--green);color:#fff;}
+  .act-del{flex:1;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:600;
+    background:#E8C4C0;color:#9E4740;}
   .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
     background:var(--ink);color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;
     opacity:0;transition:opacity .3s;z-index:20;pointer-events:none;}
@@ -349,13 +351,17 @@ let items=baseItems.slice();
 let added=JSON.parse(localStorage.getItem('added')||'[]');
 let checkins=JSON.parse(localStorage.getItem('checkins')||'[]');
 let deleted=JSON.parse(localStorage.getItem('deleted')||'[]');
+let overrides=JSON.parse(localStorage.getItem('overrides')||'{}');
 items=items.filter(it=>!deleted.includes(it.id));
 added.forEach(it=>items.push(it));
+items.forEach(it=>{ if(overrides[it.id])Object.assign(it,overrides[it.id]); });
 
 const $=s=>document.querySelector(s);
 const todayStr=()=>new Date().toISOString().slice(0,10);
 // 统一取图标：自定义 emoji 优先，其次种子映射，再按分类兜底
 function getEmoji(it){return (it&&it.emoji)||EMOJI[it.id]||EMO[it.cat]||'📦';}
+// 转义属性值，避免名称里的引号破坏 HTML
+function escAttr(s){return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),1600);}
@@ -398,6 +404,7 @@ function openItem(id){
   const pool=it.pool?POOLNAME[it.pool]:'—';
   const ch=it.channel==='both'?'每日提醒 + 轮盘抽签':it.channel==='reminder'?'仅每日提醒':'仅记录（枢纽类）';
   const used=checkins.filter(c=>c.id===id).length;
+  const cats=['文具','数码','养生','运动','休闲'];
   $('#sheet').innerHTML=`
     <h3>${getEmoji(it)} ${it.name}</h3>
     <div class="meta">${it.brand?it.brand+' · ':''}${it.cat} · 当前：${it.status||'—'} · 已用 ${used} 次</div>
@@ -405,12 +412,79 @@ function openItem(id){
     <div class="blk"><div class="h">📅 建议频率</div><div class="s">${it.freq}</div></div>
     <div class="blk"><div class="h">💡 融入日常的动作</div><div class="s">${it.action}</div></div>
     <div class="blk"><div class="h">🏷️ 通道分配</div><div class="s">抽签池：<b>${pool}</b> ｜ 通道：<b>${ch}</b></div></div>
+
+    <div id="edit-panel" style="display:none;">
+      <div class="blk">
+        <div class="h">✏️ 修改物品</div>
+        <div class="field" style="margin:8px 0;">
+          <label>名称</label>
+          <input id="edit-name" value="${escAttr(it.name)}">
+        </div>
+        <div class="field" style="margin:8px 0;">
+          <label>图标（可自定义 emoji）</label>
+          <div class="emoji-row">
+            <div class="emoji-preview" id="edit-emoji-preview">${it.emoji||getEmoji(it)}</div>
+            <input id="edit-emoji" value="${escAttr(it.emoji||'')}" style="flex:1;" placeholder="点下方选或粘贴">
+          </div>
+          <div class="emoji-picker" id="edit-emoji-picker"></div>
+        </div>
+        <div class="field" style="margin:8px 0;">
+          <label>分类</label>
+          <select id="edit-cat">${cats.map(c=>`<option value="${c}" ${c===it.cat?'selected':''}>${c}</option>`).join('')}</select>
+        </div>
+      </div>
+    </div>
+
     <div class="acts">
       <button class="act-use" onclick="useItem(${id})">✓ 标记今天用了</button>
       <button class="act-close" onclick="closeSheet()">关闭</button>
     </div>
-    <button class="act-del" onclick="deleteItem(${id})">🗑 删除这个物品</button>`;
+    <div class="acts" id="edit-del-row" style="margin-top:10px;">
+      <button class="act-edit" onclick="toggleEdit(${id})">✏️ 修改</button>
+      <button class="act-del" onclick="deleteItem(${id})">🗑 删除物品</button>
+    </div>
+    <div class="acts" id="edit-actions" style="display:none;margin-top:10px;">
+      <button class="act-save" onclick="saveEdit(${id})">💾 保存</button>
+      <button class="act-close" onclick="toggleEdit(${id})">取消</button>
+    </div>`;
   $('#mask').classList.add('show');
+}
+function toggleEdit(id){
+  const p=$('#edit-panel'), a=$('#edit-actions'), row=$('#edit-del-row');
+  const open=p.style.display!=='block';
+  p.style.display=open?'block':'none';
+  a.style.display=open?'flex':'none';
+  row.style.display=open?'none':'flex';
+  if(open)buildEditPicker();
+}
+function buildEditPicker(){
+  const pp=$('#edit-emoji-picker');if(!pp||pp.dataset.built)return;
+  EMOJI_SET.forEach(e=>{
+    const b=document.createElement('button');b.type='button';b.textContent=e;
+    b.onclick=()=>{$('#edit-emoji').value=e;$('#edit-emoji-preview').textContent=e;};
+    pp.appendChild(b);
+  });
+  pp.dataset.built='1';
+  $('#edit-emoji').addEventListener('input',()=>{
+    $('#edit-emoji-preview').textContent=($('#edit-emoji').value.trim()||'📦');
+  });
+}
+function saveEdit(id){
+  const it=items.find(x=>x.id===id);if(!it)return;
+  const name=$('#edit-name').value.trim()||it.name;
+  const emoji=$('#edit-emoji').value.trim();
+  const cat=$('#edit-cat').value;
+  it.name=name; it.cat=cat;
+  if(emoji)it.emoji=emoji; else delete it.emoji;
+  if(added.includes(it)){
+    localStorage.setItem('added',JSON.stringify(added));
+  }else{
+    overrides[id]={name,cat,emoji:emoji||undefined};
+    localStorage.setItem('overrides',JSON.stringify(overrides));
+  }
+  renderLib();buildPoolChips();drawWheel();renderRem();renderRec();renderTime();
+  openItem(id);
+  toast('已保存修改');
 }
 function closeSheet(){$('#mask').classList.remove('show');}
 $('#mask').addEventListener('click',e=>{if(e.target.id==='mask')closeSheet();});
@@ -421,19 +495,20 @@ function useItem(id){
   closeSheet();renderLib();renderRec();renderRem();
   toast('已记录 ✓ 盘活 +1');
 }
-window.useItem=useItem;window.closeSheet=closeSheet;
+window.useItem=useItem;window.closeSheet=closeSheet;window.deleteItem=deleteItem;
+window.toggleEdit=toggleEdit;window.saveEdit=saveEdit;
 function deleteItem(id){
   const it=items.find(x=>x.id===id);if(!it)return;
   if(!confirm('确定删除「'+it.name+'」吗？\n删除后将从物品库、轮盘、提醒、记录中移除，且不可撤销。'))return;
   const ai=added.findIndex(x=>x.id===id);
   if(ai>=0){added.splice(ai,1);localStorage.setItem('added',JSON.stringify(added));}
   else if(!deleted.includes(id)){deleted.push(id);localStorage.setItem('deleted',JSON.stringify(deleted));}
+  if(overrides[id]){delete overrides[id];localStorage.setItem('overrides',JSON.stringify(overrides));}
   checkins=checkins.filter(c=>c.id!==id);localStorage.setItem('checkins',JSON.stringify(checkins));
   items=items.filter(x=>x.id!==id);
   closeSheet();renderLib();buildPoolChips();drawWheel();renderRem();renderRec();renderTime();
   toast('已删除「'+it.name+'」');
 }
-window.deleteItem=deleteItem;
 
 /* ============ 轮盘抽签 ============ */
 let curPool='all';let curItems=[];let deg=0;
