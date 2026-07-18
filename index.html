@@ -153,6 +153,8 @@
   .sheet .acts{display:flex;gap:10px;margin-top:6px;}
   .sheet .acts button{flex:1;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:600;}
   .act-use{background:var(--green);color:#fff;} .act-close{background:var(--line);color:var(--ink);}
+  .act-del{width:100%;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:600;
+    background:#E8C4C0;color:#9E4740;margin-top:10px;}
   .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
     background:var(--ink);color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;
     opacity:0;transition:opacity .3s;z-index:20;pointer-events:none;}
@@ -346,6 +348,8 @@ const baseItems=[
 let items=baseItems.slice();
 let added=JSON.parse(localStorage.getItem('added')||'[]');
 let checkins=JSON.parse(localStorage.getItem('checkins')||'[]');
+let deleted=JSON.parse(localStorage.getItem('deleted')||'[]');
+items=items.filter(it=>!deleted.includes(it.id));
 added.forEach(it=>items.push(it));
 
 const $=s=>document.querySelector(s);
@@ -404,7 +408,8 @@ function openItem(id){
     <div class="acts">
       <button class="act-use" onclick="useItem(${id})">✓ 标记今天用了</button>
       <button class="act-close" onclick="closeSheet()">关闭</button>
-    </div>`;
+    </div>
+    <button class="act-del" onclick="deleteItem(${id})">🗑 删除这个物品</button>`;
   $('#mask').classList.add('show');
 }
 function closeSheet(){$('#mask').classList.remove('show');}
@@ -417,6 +422,18 @@ function useItem(id){
   toast('已记录 ✓ 盘活 +1');
 }
 window.useItem=useItem;window.closeSheet=closeSheet;
+function deleteItem(id){
+  const it=items.find(x=>x.id===id);if(!it)return;
+  if(!confirm('确定删除「'+it.name+'」吗？\n删除后将从物品库、轮盘、提醒、记录中移除，且不可撤销。'))return;
+  const ai=added.findIndex(x=>x.id===id);
+  if(ai>=0){added.splice(ai,1);localStorage.setItem('added',JSON.stringify(added));}
+  else if(!deleted.includes(id)){deleted.push(id);localStorage.setItem('deleted',JSON.stringify(deleted));}
+  checkins=checkins.filter(c=>c.id!==id);localStorage.setItem('checkins',JSON.stringify(checkins));
+  items=items.filter(x=>x.id!==id);
+  closeSheet();renderLib();buildPoolChips();drawWheel();renderRem();renderRec();renderTime();
+  toast('已删除「'+it.name+'」');
+}
+window.deleteItem=deleteItem;
 
 /* ============ 轮盘抽签 ============ */
 let curPool='all';let curItems=[];let deg=0;
