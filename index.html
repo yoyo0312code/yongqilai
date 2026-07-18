@@ -179,6 +179,10 @@
     font-size:13.5px;font-family:inherit;font-weight:600;cursor:pointer;
     box-shadow:0 3px 10px rgba(120,110,100,.18);}
   .share-btn:active{transform:translateY(1px);}
+  .mini-btn{display:block;margin:8px auto 0;background:rgba(255,255,255,.18);color:#fff;
+    border:1px solid rgba(255,255,255,.5);border-radius:18px;padding:6px 16px;
+    font-size:12px;font-family:inherit;cursor:pointer;}
+  .mini-btn:active{transform:translateY(1px);}
   .qr-box{display:flex;justify-content:center;margin:10px 0 4px;}
   .qr-img{width:180px;height:180px;background:#fff;border-radius:12px;padding:8px;box-shadow:0 2px 8px rgba(0,0,0,.08);}
   .share-link{font-size:12.5px;word-break:break-all;background:rgba(120,110,100,.08);
@@ -189,13 +193,14 @@
 <div class="phone">
   <header>
     <h1>用起来 🌿</h1>
-    <p>把闲置物品，重新拉回生活流 · v1.7</p>
+    <p>把闲置物品，重新拉回生活流 · <span id="ver-tag">v1.8</span></p>
     <div class="stats">
       <div class="stat"><b id="st-items">0</b><span>物品总数</span></div>
       <div class="stat"><b id="st-used">0</b><span>已盘活</span></div>
       <div class="stat"><b id="st-streak">0</b><span>连续天数</span></div>
     </div>
     <button class="share-btn" id="share-btn">📤 分享给朋友</button>
+    <button class="mini-btn" id="update-btn">🔄 检查更新</button>
   </header>
 
   <main>
@@ -884,23 +889,59 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) refreshA
 <script>
 (function(){
   var APP_VER='v1.8';
+  // 头部版本号动态化，避免硬编码过期（之前卡在 v1.7 的根因之一）
+  var vt=document.getElementById('ver-tag'); if(vt) vt.textContent=APP_VER;
   var m=document.createElement('link');m.rel='manifest';m.href='manifest.webmanifest';document.head.appendChild(m);
+
+  /* ===== 显式更新检测：用 version.json（缓存破坏式）探测，不依赖 SW 自动更新，
+     避免旧 Service Worker 缓存把用户闷在旧版本里 ===== */
+  function showUpdateBanner(ver){
+    var t=document.getElementById('toast'); if(!t)return;
+    t.textContent = ver ? ('发现新版本 '+ver+'，点此刷新 ↻') : '发现新版本，点此刷新 ↻';
+    t.style.cursor='pointer'; t.classList.add('show');
+    t.onclick=function(){ doUpdate(); };
+  }
+  function flash(msg,ms){
+    var t=document.getElementById('toast'); if(!t)return;
+    t.textContent=msg; t.classList.add('show');
+    setTimeout(function(){ if(t.textContent===msg) t.classList.remove('show'); }, ms||1600);
+  }
+  function doUpdate(){
+    // 强制 SW 拉取新文件并硬刷新（绕过旧缓存）
+    if(navigator.serviceWorker && navigator.serviceWorker.getRegistration){
+      navigator.serviceWorker.getRegistration().then(function(reg){
+        if(reg) reg.update();
+        location.reload(true);
+      }).catch(function(){ location.reload(true); });
+    } else { location.reload(true); }
+  }
+  function checkUpdate(manual){
+    fetch('version.json?t='+Date.now(), {cache:'no-store'})
+      .then(function(r){return r.json();})
+      .then(function(j){
+        if(j && j.ver && j.ver!==APP_VER){ showUpdateBanner(j.ver); }
+        else if(manual){ flash('已是最新 '+APP_VER); }
+      })
+      .catch(function(){ if(manual) flash('检查失败，可能网络不通',1900); });
+  }
+  var ub=document.getElementById('update-btn');
+  if(ub) ub.addEventListener('click',function(){ checkUpdate(true); });
+  checkUpdate(false);                                   // 加载即检测
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden) checkUpdate(false); });
+
+  /* ===== Service Worker（离线 + 快开）===== */
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').then(function(reg){
-      function prompt(){
-        var t=document.getElementById('toast');
-        if(!t)return;
-        t.textContent='发现新版本 '+APP_VER+'，点此刷新 ↻';
-        t.style.cursor='pointer';t.classList.add('show');
-        t.onclick=function(){location.reload();};
-      }
+      function prompt(){ showUpdateBanner(); }
       if(reg.waiting && navigator.serviceWorker.controller){prompt();}
       reg.addEventListener('updatefound',function(){
-        var nw=reg.installing;if(!nw)return;
+        var nw=reg.installing; if(!nw)return;
         nw.addEventListener('statechange',function(){
           if(nw.state==='installed' && navigator.serviceWorker.controller){prompt();}
         });
       });
+      // SW 安装新版本后主动拉取一次（网络通时立即生效）
+      setInterval(function(){ if(reg) reg.update(); }, 5*60*1000);
     }).catch(function(){});
   }
 })();
