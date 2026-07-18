@@ -178,7 +178,7 @@
 <div class="phone">
   <header>
     <h1>用起来 🌿</h1>
-    <p>把闲置物品，重新拉回生活流 · v1.4</p>
+    <p>把闲置物品，重新拉回生活流 · v1.5</p>
     <div class="stats">
       <div class="stat"><b id="st-items">0</b><span>物品总数</span></div>
       <div class="stat"><b id="st-used">0</b><span>已盘活</span></div>
@@ -599,9 +599,13 @@ function doSpin(){
   spinning=true;
   const N=curItems.length,step=2*Math.PI/N;
   const winner=Math.floor(Math.random()*N);
-  const target=2*Math.PI*5-(winner*step+step/2);
-  let td=target*180/Math.PI;
-  while(td<=deg)td+=360;
+  // 目标绝对角（含 5 整圈），取模后即为最终落点位置
+  const targetDeg=(((2*Math.PI*5-(winner*step+step/2))*180/Math.PI)%360+360)%360;
+  // 相对当前角度再转满至少 5 圈，保证每次转速一致
+  let td=deg+360*5;
+  // 把当前落点对齐到中奖位置（mod 360）
+  const curMod=((td%360)+360)%360;
+  td+=((targetDeg-curMod)%360+360)%360;
   deg=td;
   wheel.style.transition='transform 4s cubic-bezier(.17,.67,.25,1)';
   wheel.style.transform=`rotate(${deg}deg)`;
@@ -799,7 +803,7 @@ renderLib();buildPoolChips();drawWheel();renderRem();renderRec();renderTime();
 </script>
 <script>
 (function(){
-  var APP_VER='v1.4';
+  var APP_VER='v1.5';
   var m=document.createElement('link');m.rel='manifest';m.href='manifest.webmanifest';document.head.appendChild(m);
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').then(function(reg){
