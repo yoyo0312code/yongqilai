@@ -394,7 +394,8 @@ added.forEach(it=>items.push(it));
 items.forEach(it=>{ if(overrides[it.id])Object.assign(it,overrides[it.id]); });
 
 const $=s=>document.querySelector(s);
-const todayStr=()=>new Date().toISOString().slice(0,10);
+const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const todayStr=()=>ymd(new Date());
 // 统一取图标：自定义 emoji 优先，其次种子映射，再按分类兜底
 function getEmoji(it){return (it&&it.emoji)||EMOJI[it.id]||EMO[it.cat]||'📦';}
 // 转义属性值，避免名称里的引号破坏 HTML
@@ -719,8 +720,8 @@ function renderRec(){
   const list=$('#rec-list');list.innerHTML='';
   // ===== 每周盘点（周一到周日）=====
   const md=s=>{const p=s.split('-');return (+p[1])+'/'+(+p[2]);};
-  const mondayOf=s=>{const dt=new Date(s+'T00:00:00Z');const day=(dt.getUTCDay()+6)%7;dt.setUTCDate(dt.getUTCDate()-day);return dt.toISOString().slice(0,10);};
-  const addDays=(s,n)=>{const dt=new Date(s+'T00:00:00Z');dt.setUTCDate(dt.getUTCDate()+n);return dt.toISOString().slice(0,10);};
+  const mondayOf=s=>{const dt=new Date(s+'T00:00:00');const day=(dt.getDay()+6)%7;dt.setDate(dt.getDate()-day);return ymd(dt);};
+  const addDays=(s,n)=>{const dt=new Date(s+'T00:00:00');dt.setDate(dt.getDate()+n);return ymd(dt);};
   const t=todayStr();
   const ws=mondayOf(t), we=addDays(ws,6);
   const ls=addDays(ws,-7), le=addDays(ws,-1);
@@ -863,22 +864,26 @@ renderLib();buildPoolChips();drawWheel();renderRem();renderRec();renderTime();
 /* ============ 每日 00:00 自动重置提醒 ============ */
 /* checkins 按天存储（{id,date}），跨过 00:00 后重渲染即让所有物品回到
    “标记用”原始状态，按当天重新计算。页面常驻过夜时也能自动刷新。 */
+// 跨过 00:00 后：提醒回到“标记用”、记录出现新的一天、库与时间线同步重算
+function refreshAllOnNewDay(){
+  renderLib();renderRem();renderRec();renderTime();   // 提醒 + 记录 联动刷新
+}
 function scheduleMidnightReset(){
   const now=new Date();
   const next=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,0,0); // 次日 00:00:00
   const ms=next-now;
   setTimeout(()=>{
-    renderRem();                 // 静默重算：今日标记清空，回到原始状态
-    scheduleMidnightReset();     // 排下一天
+    refreshAllOnNewDay();            // 静默重算：今日标记清空、记录翻页到新的一天
+    scheduleMidnightReset();         // 排下一天
   }, ms);
 }
 scheduleMidnightReset();
 // 切回前台 / 解锁时也重算（覆盖后台跨天 setTimeout 被节流的情况）
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden) renderRem(); });
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) refreshAllOnNewDay(); });
 </script>
 <script>
 (function(){
-  var APP_VER='v1.7';
+  var APP_VER='v1.8';
   var m=document.createElement('link');m.rel='manifest';m.href='manifest.webmanifest';document.head.appendChild(m);
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').then(function(reg){
