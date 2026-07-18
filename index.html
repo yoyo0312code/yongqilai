@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>用起来 · 闲置物品盘活原型</title>
+<meta name="theme-color" content="#D9B3AE">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="用起来">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+  @font-face{font-family:'江西拙楷';src:url('fonts/jiangxizhuokai.ttf') format('truetype');font-display:swap;}
+  :root{
+    --bg:#F5F1EC; --card:#FFFFFF; --ink:#6B635C; --sub:#A89C92;
+    --brand:#D9B3AE; --brand2:#A7C0BC; --accent:#DCC79A; --green:#A9C2A4;
+    --line:#EAE3DB;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{margin:0;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:#ECE6DE;color:var(--ink);display:flex;justify-content:center;}
+  .phone{width:100%;max-width:420px;min-height:100vh;background:var(--bg);
+    position:relative;display:flex;flex-direction:column;box-shadow:0 0 40px rgba(0,0,0,.15);}
+  header{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;
+    padding:18px 18px 14px;}
+  header h1{margin:0;font-size:20px;letter-spacing:1px;}
+  header p{margin:4px 0 0;font-size:12px;opacity:.9;}
+  .stats{display:flex;gap:8px;margin-top:12px;}
+  .stat{flex:1;background:rgba(255,255,255,.18);border-radius:12px;padding:8px;text-align:center;}
+  .stat b{display:block;font-size:18px;}
+  .stat span{font-size:11px;opacity:.9;}
+  main{flex:1;overflow-y:auto;padding:14px 14px 90px;}
+  .view{display:none;animation:fade .25s;}
+  .view.active{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  h2.sec{font-size:14px;color:var(--sub);margin:6px 4px 10px;font-weight:600;}
+
+  /* 物品卡 */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .item{background:var(--card);border-radius:18px;padding:12px;position:relative;
+    box-shadow:0 4px 14px rgba(120,110,100,.08);cursor:pointer;transition:transform .12s;}
+  .item:active{transform:scale(.97);}
+  .item .emo{font-size:26px;}
+  .item .nm{font-size:13px;font-weight:600;margin-top:4px;line-height:1.3;}
+  .item .tag{display:inline-block;font-size:10px;color:#fff;background:var(--sub);
+    border-radius:6px;padding:1px 6px;margin-top:6px;}
+  .item .pool{display:inline-block;font-size:10px;color:var(--brand2);font-weight:600;margin-top:6px;margin-left:6px;vertical-align:middle;}
+  .add-card{border:2px dashed var(--brand);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--brand);cursor:pointer;}
+  .add-card .emo{font-size:24px;} .add-card .nm{color:var(--brand);margin-top:4px;}
+  .badge{position:absolute;top:8px;right:8px;font-size:9px;padding:2px 6px;border-radius:8px;color:#fff;}
+  .b-both{background:var(--green);} .b-reminder{background:var(--accent);} .b-record{background:var(--sub);}
+
+  /* 轮盘 */
+  .wheel-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;}
+  .pools{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;}
+  .chip{background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:7px 14px;font-size:12px;cursor:pointer;}
+  .chip.on{background:var(--brand);color:#fff;border-color:var(--brand);}
+  .wheel-box{position:relative;width:300px;height:300px;margin-top:6px;}
+  #wheel{transition:transform 4s cubic-bezier(.17,.67,.25,1);border-radius:50%;
+    box-shadow:0 6px 20px rgba(0,0,0,.15);}
+  .pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);
+    width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;
+    border-top:20px solid var(--ink);z-index:3;filter:drop-shadow(0 2px 2px rgba(0,0,0,.2));}
+  .hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:68px;height:68px;border-radius:50%;background:#fff;z-index:4;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    box-shadow:0 4px 16px rgba(120,110,100,.22);border:3px solid var(--brand2);
+    transition:transform .12s;}
+  .hub:active{transform:translate(-50%,-50%) scale(.92);}
+  .hub .hg{font-size:19px;font-weight:800;color:var(--brand);line-height:1;font-family:'江西拙楷','KaiTi',cursive;}
+  .hub .hs{font-size:9px;color:var(--sub);margin-top:3px;letter-spacing:1px;}
+  .spin-btn{background:var(--brand);color:#fff;border:none;border-radius:28px;
+    padding:12px 36px;font-size:15px;font-weight:600;box-shadow:0 4px 12px rgba(232,160,160,.5);}
+  .spin-btn:disabled{opacity:.5;}
+
+  /* 时间线 / 日常 routine */
+  .timeline{padding:4px 0 0 6px;}
+  .ctime{position:relative;padding:0 0 18px 24px;}
+  .ctime:before{content:'';position:absolute;left:6px;top:10px;bottom:0;width:2px;background:var(--line);}
+  .ctime:last-child:before{display:none;}
+  .ctime .dot{position:absolute;left:0;top:4px;width:14px;height:14px;border-radius:50%;
+    background:var(--brand);box-shadow:0 0 0 4px var(--bg);}
+  .ctime.eve .dot{background:var(--brand2);} .ctime.any .dot{background:var(--accent);}
+  .ctime .tl{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px;}
+  .titem{display:inline-flex;align-items:center;gap:6px;background:var(--card);
+    border-radius:14px;padding:7px 11px;margin:0 7px 8px 0;cursor:pointer;
+    box-shadow:0 3px 10px rgba(120,110,100,.08);transition:transform .12s;}
+  .titem:active{transform:scale(.95);}
+  .titem .te{font-size:17px;} .titem .tn{font-size:12px;color:var(--ink);}
+
+  /* 提醒 */
+  .rem{background:var(--card);border-radius:14px;padding:12px;margin-bottom:10px;
+    box-shadow:0 2px 8px rgba(0,0,0,.04);display:flex;align-items:center;gap:10px;}
+  .rem .ico{font-size:20px;}
+  .rem .body{flex:1;}
+  .rem .body .t{font-size:13px;font-weight:600;}
+  .rem .body .f{font-size:11px;color:var(--sub);margin-top:2px;}
+  .rem .do{font-size:11px;color:#fff;background:var(--green);border:none;
+    border-radius:10px;padding:6px 10px;}
+  .rem .done{background:var(--line);color:var(--sub);}
+
+  /* 记录 */
+  .rec-card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:10px;
+    box-shadow:0 2px 8px rgba(0,0,0,.04);}
+  .rec-card .d{font-size:13px;font-weight:600;margin-bottom:6px;}
+  .rec-card .pill{display:inline-block;background:var(--bg);border-radius:8px;
+    font-size:11px;padding:3px 8px;margin:3px 4px 0 0;}
+
+  /* 新增表单 */
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;}
+  .field input,.field textarea,.field select{width:100%;border:1px solid var(--line);
+    border-radius:10px;padding:10px;font-size:14px;background:#fff;font-family:inherit;}
+  .field textarea{resize:vertical;min-height:60px;}
+  .btn{width:100%;background:var(--brand2);color:#fff;border:none;border-radius:18px;
+    padding:13px;font-size:15px;font-weight:600;}
+  .ai-out{background:#fff;border:1px dashed var(--brand2);border-radius:12px;
+    padding:12px;margin-top:10px;font-size:13px;display:none;}
+  .ai-out h4{margin:0 0 8px;font-size:13px;color:var(--brand2);}
+  .ai-out .row{margin:4px 0;font-size:12px;}
+  .ai-out .row b{color:var(--ink);}
+
+  /* 底部导航 */
+  nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+    width:100%;max-width:420px;background:#fff;border-top:1px solid var(--line);
+    display:flex;}
+  nav .tab{flex:1;text-align:center;padding:9px 0;font-size:10px;color:var(--sub);
+    cursor:pointer;}
+  nav .tab .ic{font-size:20px;display:block;}
+  nav .tab.on{color:var(--brand);}
+
+  /* 弹窗 */
+  .mask{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;
+    align-items:flex-end;justify-content:center;z-index:10;}
+  .mask.show{display:flex;}
+  .sheet{width:100%;max-width:420px;background:var(--bg);border-radius:20px 20px 0 0;
+    padding:18px;max-height:82vh;overflow-y:auto;animation:up .25s;}
+  @keyframes up{from{transform:translateY(100%)}to{transform:none}}
+  .sheet h3{margin:0 0 4px;font-size:18px;}
+  .sheet .meta{font-size:12px;color:var(--sub);margin-bottom:12px;}
+  .blk{background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;}
+  .blk .h{font-size:12px;color:var(--brand2);font-weight:600;margin-bottom:6px;}
+  .blk .s{font-size:13px;line-height:1.6;}
+  .sheet .acts{display:flex;gap:10px;margin-top:6px;}
+  .sheet .acts button{flex:1;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:600;}
+  .act-use{background:var(--green);color:#fff;} .act-close{background:var(--line);color:var(--ink);}
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;
+    opacity:0;transition:opacity .3s;z-index:20;pointer-events:none;}
+  .toast.show{opacity:.95;}
+</style>
+</head>
+<body>
+<div class="phone">
+  <header>
+    <h1>用起来 🌿</h1>
+    <p>把闲置物品，重新拉回生活流</p>
+    <div class="stats">
+      <div class="stat"><b id="st-items">0</b><span>物品总数</span></div>
+      <div class="stat"><b id="st-used">0</b><span>已盘活</span></div>
+      <div class="stat"><b id="st-streak">0</b><span>连续天数</span></div>
+    </div>
+  </header>
+
+  <main>
+    <!-- 物品库 -->
+    <section class="view" id="v-lib">
+      <h2 class="sec">我的物品库（点击看场景分析）</h2>
+      <div class="grid" id="lib-grid"></div>
+      <div class="add-wrap" id="add-wrap" style="display:none;margin-top:14px;">
+        <h2 class="sec">新增物品 → 自动场景分析 → 分配通道</h2>
+        <div class="field">
+          <label>物品名称 *</label>
+          <input id="add-name" placeholder="例如：颈部按摩仪">
+        </div>
+        <div class="field">
+          <label>品牌 / 备注（可选）</label>
+          <input id="add-brand" placeholder="例如：真不二">
+        </div>
+        <div class="field">
+          <label>当前状态（可选）</label>
+          <input id="add-status" placeholder="例如：一个月用一两次">
+        </div>
+        <button class="btn" id="add-btn">✨ 智能场景分析</button>
+        <div class="ai-out" id="ai-out"></div>
+        <div class="field" id="assign-box" style="display:none;margin-top:12px;">
+          <label>分配到哪个通道</label>
+          <select id="add-channel">
+            <option value="both">每日提醒 + 轮盘抽签</option>
+            <option value="reminder">仅每日提醒（不进轮盘）</option>
+            <option value="record">仅记录（容器/枢纽类）</option>
+          </select>
+          <button class="btn" id="save-btn" style="margin-top:10px;background:var(--green);">✓ 添加到物品库</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 轮盘抽签 -->
+    <section class="view" id="v-wheel">
+      <h2 class="sec">无聊了？点中间 GO 抽一个，抽到哪个用哪个</h2>
+      <div class="wheel-wrap">
+        <div class="pools" id="pool-chips"></div>
+        <div class="wheel-box">
+          <div class="pointer"></div>
+          <canvas id="wheel" width="300" height="300"></canvas>
+          <div class="hub" id="hub"><span class="hg">GO</span><span class="hs">点我抽</span></div>
+        </div>
+        <button class="spin-btn" id="spin">🎯 转一次</button>
+      </div>
+    </section>
+
+    <!-- 日常提醒 -->
+    <section class="view" id="v-rem">
+      <h2 class="sec">今日提醒（已融入日常的会自动降级）</h2>
+      <div id="rem-list"></div>
+    </section>
+
+    <!-- 使用记录 -->
+    <section class="view" id="v-rec">
+      <h2 class="sec">使用记录 · 盘活成就感</h2>
+      <div id="rec-list"></div>
+    </section>
+
+    <!-- 日常时间线 -->
+    <section class="view active" id="v-time">
+      <h2 class="sec">把物品嵌进一天 · 按时间线融入 routine</h2>
+      <div class="timeline" id="time-list"></div>
+    </section>
+  </main>
+
+  <nav id="nav">
+    <div class="tab on" data-v="v-time"><span class="ic">🕐</span>日常</div>
+    <div class="tab" data-v="v-lib"><span class="ic">📦</span>物品库</div>
+    <div class="tab" data-v="v-wheel"><span class="ic">🎡</span>轮盘</div>
+    <div class="tab" data-v="v-rem"><span class="ic">⏰</span>提醒</div>
+    <div class="tab" data-v="v-rec"><span class="ic">✅</span>记录</div>
+  </nav>
+</div>
+
+<div class="mask" id="mask">
+  <div class="sheet" id="sheet"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 种子数据（你的 26 件真实清单） ============ */
+const EMO={文具:'🖊️',数码:'📱',养生:'🌿',运动:'🏃',休闲:'🎲'};
+const EMOJI={1:'🖊️',2:'🖋️',3:'📓',4:'🔖',5:'📷',6:'📟',7:'📚',8:'🔊',9:'🩸',10:'🥤',
+ 11:'🌿',12:'🦶',13:'💆',14:'💡',15:'🤲',16:'🧽',17:'🔥',18:'🪒',19:'🎭',20:'🏋️',
+ 21:'🏸',22:'🧘',23:'♟️',24:'🎲',25:'👜',26:'👁️',27:'🔫',28:'🧣',29:'🛏️',30:'🧠',31:'🎤',32:'🫧',33:'🏕️',34:'🧩',35:'🔐'};
+const SHORT={1:'圆点笔',2:'各种笔',3:'笔记本',4:'印章',5:'Osmo相机',6:'单词机',7:'Kindle',8:'音箱',9:'血氧仪',10:'胶原肽',
+ 11:'养生贴',12:'泡脚包',13:'刮痧板',14:'美容仪',15:'手膜',16:'去角质',17:'热灸垫',18:'脱毛仪',19:'面膜',20:'哑铃',
+ 21:'羽毛球',22:'瑜伽砖',23:'翻转棋',24:'诗歌骰子',25:'随身包',26:'润目贴',27:'筋膜枪',28:'肩颈按摩',29:'枕头按摩',30:'头部按摩',31:'唱K麦克',32:'泡沫轴',33:'露营桌游',34:'华容道',35:'密码机'};
+const POOLNAME={play:'随手玩',care:'护理夜',write:'书写流',move:'动起来'};
+const baseItems=[
+ {id:1,name:'圆点笔',cat:'文具',brand:'',status:'偶尔写两笔',freq:'每天 5 分钟',pool:'write',channel:'both',
+  scenes:['晨间计划/待办','记账','手账排版','心情记录'],action:'绑「喝晨间咖啡」：咖啡前写三行。'},
+ {id:2,name:'各种笔',cat:'文具',brand:'',status:'需要时找不到',freq:'按需',pool:'write',channel:'both',
+  scenes:['手写笔记','读书划线','便签','随手画'],action:'书桌/床头/玄关各放一罐，随手拿到。'},
+ {id:3,name:'各种笔记本',cat:'文具',brand:'',status:'空着/只写几页',freq:'每天一页',pool:'write',channel:'both',
+  scenes:['日程本','读书摘抄','灵感本','使用打卡本'],action:'挑一本做「每日页」，开一页记「今天用了啥」。'},
+ {id:4,name:'各种印章',cat:'文具',brand:'',status:'装饰性少用到',freq:'每周几次',pool:'write',channel:'both',
+  scenes:['手账日期章','卡片信封','礼品包装','收纳标记'],action:'和文具同盒，做手账顺手盖。'},
+ {id:5,name:'大疆Osmo Nano+镜头',cat:'数码',brand:'',status:'吃灰',freq:'每周 1–2 次',pool:'play',channel:'both',
+  scenes:['生活Vlog','运动跟拍','宠物','旅行第一视角'],action:'放随身包，每周拍 15 秒片段；镜头出门查电量。'},
+ {id:6,name:'单词机',cat:'数码',brand:'',status:'背几天就停',freq:'每天 10–15 分',pool:'write',channel:'both',
+  scenes:['通勤','排队','等电梯','如厕碎片'],action:'挂钥匙串/塞包外侧，等车必看。'},
+ {id:7,name:'Kindle',cat:'数码',brand:'',status:'偶尔看',freq:'每天 20–30 分',pool:'play',channel:'both',
+  scenes:['睡前阅读','通勤','如厕','旅行'],action:'放床头替代刷手机，配泡脚包最佳。'},
+ {id:8,name:'音箱',cat:'数码',brand:'',status:'没固定场景',freq:'每天',pool:'play',channel:'both',
+  scenes:['背景音乐','播客','白噪音助眠','运动配乐'],action:'固定厨房/卧室，放松时开——很多物品的氛围引擎。'},
+ {id:9,name:'血氧仪',cat:'数码',brand:'',status:'担心时才翻',freq:'每月 1 次基线',pool:'care',channel:'reminder',
+  scenes:['运动后','感冒/呼吸不适','睡眠参考','建基线'],action:'放药箱常备，每月固定测一次记数字。'},
+ {id:10,name:'胶原蛋白肽',cat:'养生',brand:'',status:'断断续续',freq:'每天 1 袋',pool:'care',channel:'reminder',
+  scenes:['早餐后','下午茶','运动后'],action:'和固定饮品绑定，袋子放餐桌可见处。'},
+ {id:11,name:'真不二 养生贴',cat:'养生',brand:'真不二',status:'酸痛才想起',freq:'每周 2–3 次',pool:'care',channel:'reminder',
+  scenes:['肩颈/腰/膝酸痛','经期','伏案养护'],action:'放沙发扶手/床头，酸痛当下拿到；设养护日。'},
+ {id:12,name:'真不二 泡脚药包',cat:'养生',brand:'真不二',status:'冬天偶尔',freq:'每周 3–4 次',pool:'care',channel:'both',
+  scenes:['睡前泡脚','经期暖宫','熬夜后'],action:'绑 Kindle+音箱=阅读+音乐放松夜。最该养成。'},
+ {id:13,name:'面部刮痧板+油',cat:'养生',brand:'',status:'试过一两次',freq:'每周 2–3 次',pool:'care',channel:'both',
+  scenes:['晚间护肤','晨起消肿','下颌线按摩'],action:'放洗手台，护肤流程加一步，与仪器轮换。'},
+ {id:14,name:'面部美容仪器',cat:'养生',brand:'',status:'步骤多懒得搞',freq:'每周 2–3 次',pool:'care',channel:'both',
+  scenes:['清洁','导入','提拉'],action:'和刮痧排班，降低决策成本。'},
+ {id:15,name:'手膜',cat:'养生',brand:'',status:'囤了一堆',freq:'每周 1–2 次',pool:'care',channel:'both',
+  scenes:['晚间','做家务后','追剧时'],action:'边看剧边戴 20 分，和面膜夜合并。'},
+ {id:16,name:'身体去角质',cat:'养生',brand:'',status:'洗澡想不起',freq:'每周 1 次',pool:'care',channel:'reminder',
+  scenes:['洗澡时','换季','运动前后'],action:'放浴室固定格，固定洗澡日用。'},
+ {id:17,name:'真不二 热灸垫',cat:'养生',brand:'真不二',status:'偶尔用',freq:'每天/按需',pool:'care',channel:'both',
+  scenes:['午休热敷','睡前放松','经期腹/腰','肩颈'],action:'床头/沙发常备，午休或睡前开启。'},
+ {id:18,name:'脱毛仪',cat:'养生',brand:'',status:'断断续续白买',freq:'每 1–2 周 1 次',pool:'care',channel:'reminder',
+  scenes:['四肢','腋下','按能量周期'],action:'必须设日历提醒+固定护理日，最依赖提醒。'},
+ {id:19,name:'各种面膜',cat:'养生',brand:'',status:'囤货用得慢',freq:'每周 2–3 次',pool:'care',channel:'both',
+  scenes:['晚间','周末','熬夜/晒后'],action:'设「面膜夜」，配音乐+手膜一次搞定。'},
+ {id:20,name:'哑铃',cat:'运动',brand:'',status:'收柜子搬麻烦',freq:'每周 3–4 次',pool:'move',channel:'both',
+  scenes:['居家力量','办公间隙','跟练视频'],action:'放客厅显眼处（别收柜子），跟练 10 分。'},
+ {id:21,name:'羽毛球拍',cat:'运动',brand:'',status:'约到人才打',freq:'每周/两周 1 次',pool:'move',channel:'both',
+  scenes:['周末户外','朋友约球','亲子'],action:'放玄关，天好+周末带上；设约球提醒。'},
+ {id:22,name:'木质瑜伽砖',cat:'运动',brand:'',status:'没配合用',freq:'每周 2–3 次',pool:'move',channel:'both',
+  scenes:['瑜伽','拉伸','冥想','办公拉伸'],action:'放瑜伽垫旁，晨起/睡前拉伸 5 分。'},
+ {id:23,name:'翻转棋',cat:'休闲',brand:'',status:'玩过几次',freq:'每周 1 次',pool:'play',channel:'both',
+  scenes:['家人对弈','无聊时','聚会破冰'],action:'放茶几，周末家庭游戏夜。适合进抽签池。'},
+ {id:24,name:'诗歌骰子',cat:'休闲',brand:'',status:'玩过一两次',freq:'每周 1 次',pool:'play',channel:'both',
+  scenes:['聚会破冰','家庭互动','无聊创作','亲子练脑'],action:'和翻转棋同放，聚会/无聊抽到就开一局。'},
+ {id:25,name:'Ms Square随身包',cat:'休闲',brand:'Ms Square',status:'只当普通包',freq:'每天出门',pool:null,channel:'record',
+  scenes:['日常出门','短途','装相机/单词机/笔'],action:'当 EDC 每日包，高频小物常驻——串联其他物品的枢纽。'},
+ {id:26,name:'真不二 润目贴',cat:'养生',brand:'真不二',status:'囤着少贴',freq:'每天/按需',pool:'care',channel:'both',
+  scenes:['看屏后','用眼过度','午休','睡前'],action:'办公桌+床头各放几片，午休/睡前贴，配热灸垫成眼部组合。'},
+ {id:27,name:'筋膜枪',cat:'养生',brand:'',status:'一个月一两次',freq:'每周 3–4 次',pool:'care',channel:'both',
+  scenes:['久坐后腰颈放松','运动完小腿/大腿','睡前小腿消肿','办公间隙肩颈'],action:'放沙发边而非柜子，每晚追剧时顺手用；运动后即用。'},
+ {id:28,name:'肩颈按摩仪',cat:'养生',brand:'',status:'偶尔用',freq:'每天或每周几次',pool:'care',channel:'both',
+  scenes:['久坐肩颈酸痛','午休放松','睡前舒缓','办公间隙'],action:'放办公桌/沙发，肩颈酸时立刻用；设每日养护提醒。'},
+ {id:29,name:'枕头按摩仪',cat:'养生',brand:'',status:'买了少垫',freq:'每天/按需',pool:'care',channel:'both',
+  scenes:['沙发看剧垫腰/颈','午休','睡前放松','久坐腰舒缓'],action:'放沙发或床头，追剧/午休时垫着，零时间成本放松。'},
+ {id:30,name:'头部按摩爪',cat:'养生',brand:'',status:'偶尔把玩',freq:'每天或按需',pool:'care',channel:'both',
+  scenes:['睡前放松助眠','洗头时/洗头后','办公间隙提神','追剧时'],action:'放床头/洗手台，睡前或洗头时抓一抓；犯困时提神。'},
+ {id:31,name:'唱K麦克风',cat:'休闲',brand:'',status:'偶尔唱',freq:'每周 1 次',pool:'play',channel:'both',
+  scenes:['周末聚会K歌','睡前独唱','无聊时','亲子/朋友'],action:'连手机/电视，周末聚会或睡前独唱一首，零门槛解压。'},
+ {id:32,name:'泡沫轴',cat:'运动',brand:'',status:'运动后少用',freq:'每周 3–4 次',pool:'move',channel:'both',
+  scenes:['运动后放松大腿/小腿','久坐后滚背','睡前腿部放松','跟练拉伸'],action:'放客厅/瑜伽垫旁，运动完或久坐后滚一滚，放松腿部肌肉。'},
+ {id:33,name:'计客露营达人桌游',cat:'休闲',brand:'计客',status:'偶尔玩',freq:'每周 1 次',pool:'play',channel:'both',
+  scenes:['周末聚会','家庭游戏夜','露营/户外','无聊时'],action:'放客厅茶几，周末家庭游戏夜或露营时带上。'},
+ {id:34,name:'计客华容道游戏',cat:'休闲',brand:'计客',status:'偶尔玩',freq:'每天碎片',pool:'play',channel:'both',
+  scenes:['碎片时间','午后动脑','亲子','解压'],action:'放桌面随手玩，碎片时间滑一滑练脑解压。'},
+ {id:35,name:'计客密码机游戏',cat:'休闲',brand:'计客',status:'偶尔玩',freq:'每天碎片',pool:'play',channel:'both',
+  scenes:['碎片时间','午后动脑','亲子','无聊时'],action:'放桌面，碎片时间拨一拨练脑。'},
+];
+
+/* ============ 状态 ============ */
+let items=baseItems.slice();
+let added=JSON.parse(localStorage.getItem('added')||'[]');
+let checkins=JSON.parse(localStorage.getItem('checkins')||'[]');
+added.forEach(it=>items.push(it));
+
+const $=s=>document.querySelector(s);
+const todayStr=()=>new Date().toISOString().slice(0,10);
+
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1600);}
+
+/* ============ 导航 ============ */
+$('#nav').addEventListener('click',e=>{
+  const tab=e.target.closest('.tab');if(!tab)return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  tab.classList.add('on');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  $('#'+tab.dataset.v).classList.add('active');
+});
+
+/* ============ 物品库 ============ */
+function renderLib(){
+  const g=$('#lib-grid');g.innerHTML='';
+  items.forEach(it=>{
+    const ch=it.channel==='both'?'b-both':it.channel==='reminder'?'b-reminder':'b-record';
+    const chTxt=it.channel==='both'?'提醒+抽签':it.channel==='reminder'?'仅提醒':'仅记录';
+    const pool=it.pool?POOLNAME[it.pool]:'';
+    const d=document.createElement('div');d.className='item';
+    d.innerHTML=`<div class="badge ${ch}">${chTxt}</div>
+      <div class="emo">${EMOJI[it.id]||EMO[it.cat]||'📦'}</div>
+      <div class="nm">${it.name}</div>
+      <span class="tag">${it.cat}</span>${pool?`<div class="pool">${pool}</div>`:''}`;
+    d.onclick=()=>openItem(it.id);
+    g.appendChild(d);
+  });
+  const addCard=document.createElement('div');addCard.className='item add-card';
+  addCard.innerHTML=`<div class="emo">➕</div><div class="nm">新增物品</div>`;
+  addCard.onclick=()=>{const w=$('#add-wrap');w.style.display='block';w.scrollIntoView({behavior:'smooth'});};
+  g.appendChild(addCard);
+  $('#st-items').textContent=items.length;
+  $('#st-used').textContent=new Set(checkins.map(c=>c.id)).size;
+  $('#st-streak').textContent=streak();
+}
+
+function openItem(id){
+  const it=items.find(x=>x.id===id);if(!it)return;
+  const pool=it.pool?POOLNAME[it.pool]:'—';
+  const ch=it.channel==='both'?'每日提醒 + 轮盘抽签':it.channel==='reminder'?'仅每日提醒':'仅记录（枢纽类）';
+  const used=checkins.filter(c=>c.id===id).length;
+  $('#sheet').innerHTML=`
+    <h3>${EMOJI[it.id]||EMO[it.cat]||'📦'} ${it.name}</h3>
+    <div class="meta">${it.brand?it.brand+' · ':''}${it.cat} · 当前：${it.status||'—'} · 已用 ${used} 次</div>
+    <div class="blk"><div class="h">🎯 使用场景（已深挖）</div><div class="s">${it.scenes.map(s=>'· '+s).join('<br>')}</div></div>
+    <div class="blk"><div class="h">📅 建议频率</div><div class="s">${it.freq}</div></div>
+    <div class="blk"><div class="h">💡 融入日常的动作</div><div class="s">${it.action}</div></div>
+    <div class="blk"><div class="h">🏷️ 通道分配</div><div class="s">抽签池：<b>${pool}</b> ｜ 通道：<b>${ch}</b></div></div>
+    <div class="acts">
+      <button class="act-use" onclick="useItem(${id})">✓ 标记今天用了</button>
+      <button class="act-close" onclick="closeSheet()">关闭</button>
+    </div>`;
+  $('#mask').classList.add('show');
+}
+function closeSheet(){$('#mask').classList.remove('show');}
+$('#mask').addEventListener('click',e=>{if(e.target.id==='mask')closeSheet();});
+
+function useItem(id){
+  checkins.push({id,date:todayStr()});
+  localStorage.setItem('checkins',JSON.stringify(checkins));
+  closeSheet();renderLib();renderRec();renderRem();
+  toast('已记录 ✓ 盘活 +1');
+}
+window.useItem=useItem;window.closeSheet=closeSheet;
+
+/* ============ 轮盘抽签 ============ */
+let curPool='all';let curItems=[];let deg=0;
+const PALETTE=['rgba(174,191,187,.5)','rgba(184,194,203,.5)','rgba(197,193,201,.5)','rgba(169,190,196,.5)'];
+const wheel=$('#wheel');const wctx=wheel.getContext('2d');
+
+function buildPoolChips(){
+  const wrap=$('#pool-chips');
+  const opts=[['all','全部可抽签'],['play','🎲 随手玩'],['care','💆 护理夜'],['write','✍️ 书写流'],['move','💪 动起来']];
+  wrap.innerHTML='';
+  opts.forEach(([k,t])=>{
+    const c=document.createElement('div');c.className='chip'+(k===curPool?' on':'');
+    c.textContent=t;c.onclick=()=>{curPool=k;buildPoolChips();drawWheel();};
+    wrap.appendChild(c);
+  });
+}
+function lotteryItems(){
+  return items.filter(it=>it.channel==='both'&&it.pool&&(curPool==='all'||it.pool===curPool));
+}
+function drawWheel(){
+  curItems=lotteryItems();
+  const N=curItems.length;const cx=150,cy=150,r=140;
+  wctx.clearRect(0,0,300,300);
+  if(N===0){wctx.fillStyle='#ccc';wctx.font='14px sans-serif';wctx.textAlign='center';
+    wctx.fillText('该池暂无可抽签物品',150,150);return;}
+  const step=2*Math.PI/N;
+  curItems.forEach((it,i)=>{
+    const a0=-Math.PI/2+i*step,a1=a0+step;
+    wctx.beginPath();wctx.moveTo(cx,cy);wctx.arc(cx,cy,r,a0,a1);wctx.closePath();
+    wctx.fillStyle=PALETTE[i%PALETTE.length];wctx.fill();
+    const mid=a0+step/2;
+    const label=(SHORT[it.id]||it.name.replace(/^真不二 /,'')).slice(0,6);
+    wctx.save();wctx.translate(cx,cy);wctx.rotate(mid);
+    const flip=Math.sin(mid)>0;
+    if(flip)wctx.rotate(Math.PI);
+    wctx.fillStyle='rgba(74,62,55,.92)';
+    wctx.font="15px '江西拙楷','KaiTi','STKaiti',cursive";
+    wctx.textBaseline='middle';
+    const rad=r-18;
+    if(flip){wctx.textAlign='left';wctx.fillText(label,-rad,0);}
+    else{wctx.textAlign='right';wctx.fillText(label,rad,0);}
+    wctx.restore();
+  });
+  deg=0;wheel.style.transition='none';wheel.style.transform='rotate(0deg)';
+}
+let spinning=false;
+function doSpin(){
+  if(spinning)return;
+  if(curItems.length===0){toast('该池没有可抽签物品');return;}
+  spinning=true;
+  const N=curItems.length,step=2*Math.PI/N;
+  const winner=Math.floor(Math.random()*N);
+  const target=2*Math.PI*5-(winner*step+step/2);
+  let td=target*180/Math.PI;
+  while(td<=deg)td+=360;
+  deg=td;
+  wheel.style.transition='transform 4s cubic-bezier(.17,.67,.25,1)';
+  wheel.style.transform=`rotate(${deg}deg)`;
+  setTimeout(()=>{showSpin(curItems[winner]);spinning=false;},4100);
+}
+$('#spin').addEventListener('click',doSpin);
+$('#hub').addEventListener('click',doSpin);
+function showSpin(it){
+  const sc=it.scenes[Math.floor(Math.random()*it.scenes.length)];
+  $('#sheet').innerHTML=`
+    <h3>🎯 抽到了：${it.name}</h3>
+    <div class="meta">${POOLNAME[it.pool]}池 · 建议频率 ${it.freq}</div>
+    <div class="blk"><div class="h">✨ 现在可以这么用</div><div class="s">场景：<b>${sc}</b><br>${it.action}</div></div>
+    <div class="acts">
+      <button class="act-use" onclick="useItem(${it.id})">✓ 用了，记录一下</button>
+      <button class="act-close" onclick="closeSheet()">再转一次</button>
+    </div>`;
+  $('#mask').classList.add('show');
+}
+
+/* ============ 日常提醒 ============ */
+function renderRem(){
+  const list=$('#rem-list');list.innerHTML='';
+  const remItems=items.filter(it=>it.channel==='reminder'||it.channel==='both');
+  if(remItems.length===0){list.innerHTML='<p style="color:var(--sub);font-size:13px;">暂无提醒项</p>';return;}
+  remItems.forEach(it=>{
+    const done=checkins.some(c=>c.id===it.id&&c.date===todayStr());
+    const d=document.createElement('div');d.className='rem';
+    d.innerHTML=`<div class="ico">${EMOJI[it.id]||EMO[it.cat]||'📦'}</div>
+      <div class="body"><div class="t">${it.name}</div><div class="f">${it.freq}</div></div>
+      <button class="do ${done?'done':''}" onclick="useItem(${it.id})">${done?'今日✓':'标记用'}</button>`;
+    list.appendChild(d);
+  });
+}
+
+/* ============ 使用记录 ============ */
+function streak(){
+  if(checkins.length===0)return 0;
+  const days=[...new Set(checkins.map(c=>c.date))].sort();
+  let s=days.includes(todayStr())?0:1; // 今天没记录则从最后一天往前
+  let cur=days[days.length-1];
+  let count=0;
+  for(let i=days.length-1;i>=0;i--){
+    if(i===days.length-1){count=1;cur=days[i];continue;}
+    const prev=days[i];
+    const diff=(new Date(cur)-new Date(prev))/86400000;
+    if(diff===1){count++;cur=prev;}else break;
+  }
+  return count;
+}
+function renderRec(){
+  const list=$('#rec-list');list.innerHTML='';
+  const byDate={};
+  checkins.forEach(c=>{(byDate[c.date]=byDate[c.date]||[]).push(c.id);});
+  const dates=Object.keys(byDate).sort().reverse();
+  if(dates.length===0){list.innerHTML='<p style="color:var(--sub);font-size:13px;">还没有记录，去物品库点「标记今天用了」试试 👀</p>';return;}
+  dates.forEach(dt=>{
+    const names=byDate[dt].map(id=>items.find(x=>x.id===id)?.name||'物品').join('、');
+    const d=document.createElement('div');d.className='rec-card';
+    d.innerHTML=`<div class="d">${dt}　${dt===todayStr()?'（今天）':''}</div>
+      <div><span class="pill">${names}</span></div>`;
+    list.appendChild(d);
+  });
+}
+
+/* ============ 新增物品 + 场景分析 ============ */
+function analyze(name){
+  const n=name.toLowerCase();
+  let pool='care',channel='both';
+  if(/笔|本|印|写|书|kindle|单词|诗|卡/.test(name))pool='write';
+  else if(/哑铃|球|瑜伽|运动|拍|跑步/.test(name))pool='move';
+  else if(/相机|音箱|棋|骰|游戏|玩具/.test(name))pool='play';
+  else if(/包|盒|箱|架|收纳/.test(name)){pool=null;channel='record';}
+  else if(/贴|膏|灸|热敷|泡脚|面膜|护肤|面部|美容|胶原|脱毛|去角|润目/.test(name)){pool='care';channel='both';}
+  const scenesPool={
+    write:['日常随手记录','结合手账/计划本','碎片时间书写'],
+    move:['居家跟练','办公间隙活动','周末户外'],
+    play:['无聊时随手玩','聚会破冰','亲子互动'],
+    care:['晚间护肤/放松','周末集中护理','结合已有养生流程'],
+    record:['日常出门常备','收纳归类','作为其他物品的容器']
+  };
+  const sc=scenesPool[pool||'record'];
+  const freq=channel==='reminder'?'每周 2–3 次':pool==='move'?'每周 3–4 次':pool==='write'?'每天 10 分':pool==='play'?'每周 1 次':'每周 2–3 次';
+  const action=channel==='record'?`把「${name}」当日常容器，高频小物常驻其中。`
+    :`把「${name}」放在显眼处，绑定一个你已有的日常动作（习惯叠加）。`;
+  return {pool,channel,scenes:sc,freq,action};
+}
+$('#add-btn').addEventListener('click',()=>{
+  const name=$('#add-name').value.trim();
+  if(!name){toast('先填物品名称');return;}
+  const btn=$('#add-btn');btn.textContent='🔍 分析中…';btn.disabled=true;
+  setTimeout(()=>{
+    const a=analyze(name);
+    const chTxt=a.channel==='both'?'每日提醒 + 轮盘抽签':a.channel==='reminder'?'仅每日提醒':'仅记录（枢纽类）';
+    const poolTxt=a.pool?POOLNAME[a.pool]:'—';
+    $('#ai-out').style.display='block';
+    $('#ai-out').innerHTML=`<h4>✨ 智能场景分析（启发式模板）</h4>
+      <div class="row"><b>使用场景：</b>${a.scenes.join('、')}</div>
+      <div class="row"><b>建议频率：</b>${a.freq}</div>
+      <div class="row"><b>融入动作：</b>${a.action}</div>
+      <div class="row"><b>推荐通道：</b>抽签池 ${poolTxt} ｜ ${chTxt}</div>`;
+    $('#assign-box').style.display='block';
+    if(a.channel==='record')$('#add-channel').value='record';
+    else if(a.channel==='reminder')$('#add-channel').value='reminder';
+    else $('#add-channel').value='both';
+    btn.textContent='✨ 智能场景分析';btn.disabled=false;
+    $('#ai-out').dataset.an=JSON.stringify(a);
+  },700);
+});
+$('#save-btn').addEventListener('click',()=>{
+  const name=$('#add-name').value.trim();if(!name)return;
+  const a=JSON.parse($('#ai-out').dataset.an);
+  const id=Math.max(0,...items.map(i=>i.id))+1;
+  const cat=/笔|本|印|写|书|卡/.test(name)?'文具':/相机|音箱|手机|表|仪/.test(name)?'数码':/哑铃|球|瑜伽|拍/.test(name)?'运动':'养生';
+  items.push({id,name,cat,brand:$('#add-brand').value.trim(),status:$('#add-status').value.trim()||'新增',
+    freq:a.freq,pool:a.pool,channel:$('#add-channel').value,scenes:a.scenes,action:a.action});
+  if($('#add-channel').value!=='record'){
+    added.push(items[items.length-1]);localStorage.setItem('added',JSON.stringify(added));
+  }
+  toast('已添加 ✓');
+  $('#add-name').value='';$('#add-brand').value='';$('#add-status').value='';
+  $('#ai-out').style.display='none';$('#assign-box').style.display='none';
+  renderLib();buildPoolChips();drawWheel();renderTime();
+});
+
+/* ============ 时间线 / 日常 routine ============ */
+function itemSlots(it){
+  const t=(it.name+' '+it.scenes.join(' ')+' '+it.action);
+  const s=[];
+  if(/晨|早餐|早起|起床|计划|咖啡|豆浆|晨间/.test(t))s.push('早晨');
+  if(/午休|办公|午后|下午|工作|通勤|伏案|提神/.test(t))s.push('午后');
+  if(/晚|睡前|追剧|夜|护肤|泡|面膜|阅读|泡脚|拉伸/.test(t))s.push('晚间');
+  if(s.length===0||/周末|户外|运动|聚会|朋友|亲子|无聊|随时|按需|碎片|等车|排队|旅行|记录|放松|瑜伽|冥想|居家|跟练/.test(t))s.push('随时');
+  return s;
+}
+function renderTime(){
+  const order=[['早晨','☀️ 早晨 · 06–10'],['午后','🌤️ 午后 · 10–17'],['晚间','🌙 晚间 · 17–23'],['随时','⏳ 随时可融入']];
+  const map={'早晨':[],'午后':[],'晚间':[],'随时':[]};
+  items.forEach(it=>{ if(it.channel==='record')return; itemSlots(it).forEach(k=>map[k].push(it)); });
+  const wrap=$('#time-list');wrap.innerHTML='';
+  order.forEach(([key,label])=>{
+    if(!map[key].length)return;
+    const sec=document.createElement('div');
+    sec.className='ctime'+(key==='晚间'?' eve':key==='随时'?' any':'');
+    sec.innerHTML=`<span class="dot"></span><div class="tl">${label}</div>`;
+    map[key].forEach(it=>{
+      const c=document.createElement('div');c.className='titem';
+      c.innerHTML=`<span class="te">${EMOJI[it.id]||EMO[it.cat]||'📦'}</span><span class="tn">${it.name.replace(/^真不二 /,'')}</span>`;
+      c.onclick=()=>openItem(it.id);
+      sec.appendChild(c);
+    });
+    wrap.appendChild(sec);
+  });
+}
+
+/* ============ 初始化 ============ */
+renderLib();buildPoolChips();drawWheel();renderRem();renderRec();renderTime();
+</script>
+<script>
+(function(){
+  var q=location.search;
+  var m=document.createElement('link');m.rel='manifest';m.href='manifest.webmanifest'+q;document.head.appendChild(m);
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js'+q).catch(function(){});}
+})();
+</script>
+</body>
+</html>
