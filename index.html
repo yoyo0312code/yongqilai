@@ -492,12 +492,22 @@ function closeSheet(){$('#mask').classList.remove('show');}
 $('#mask').addEventListener('click',e=>{if(e.target.id==='mask')closeSheet();});
 
 function useItem(id){
-  checkins.push({id,date:todayStr()});
+  const t=todayStr();
+  if(!checkins.some(c=>c.id===id&&c.date===t))checkins.push({id,date:t});
   localStorage.setItem('checkins',JSON.stringify(checkins));
   closeSheet();renderLib();renderRec();renderRem();
   toast('已记录 ✓ 盘活 +1');
 }
-window.useItem=useItem;window.closeSheet=closeSheet;window.deleteItem=deleteItem;
+// 提醒列表里的开关：点一下标记用了，再点一下取消今日记录
+function toggleUse(id){
+  const t=todayStr();
+  const i=checkins.findIndex(c=>c.id===id&&c.date===t);
+  if(i>=0){checkins.splice(i,1);toast('已取消今日记录');}
+  else{checkins.push({id,date:t});toast('已记录 ✓ 盘活 +1');}
+  localStorage.setItem('checkins',JSON.stringify(checkins));
+  renderLib();renderRem();renderRec();
+}
+window.useItem=useItem;window.closeSheet=closeSheet;window.deleteItem=deleteItem;window.toggleUse=toggleUse;
 window.toggleEdit=toggleEdit;window.saveEdit=saveEdit;
 function deleteItem(id){
   const it=items.find(x=>x.id===id);if(!it)return;
@@ -596,7 +606,7 @@ function renderRem(){
     const d=document.createElement('div');d.className='rem';
     d.innerHTML=`<div class="ico">${getEmoji(it)}</div>
       <div class="body"><div class="t">${it.name}</div><div class="f">${it.freq}</div></div>
-      <button class="do ${done?'done':''}" onclick="useItem(${it.id})">${done?'今日✓':'标记用'}</button>`;
+      <button class="do ${done?'done':''}" onclick="toggleUse(${it.id})">${done?'今日✓ 取消':'标记用'}</button>`;
     list.appendChild(d);
   });
 }
