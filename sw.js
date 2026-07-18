@@ -1,4 +1,4 @@
-const CACHE = 'yongqilai-v5';
+const CACHE = 'yongqilai-v6';
 const ASSETS = [
   './',
   './index.html',

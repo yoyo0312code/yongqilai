@@ -189,7 +189,7 @@
 <div class="phone">
   <header>
     <h1>用起来 🌿</h1>
-    <p>把闲置物品，重新拉回生活流 · v1.6</p>
+    <p>把闲置物品，重新拉回生活流 · v1.7</p>
     <div class="stats">
       <div class="stat"><b id="st-items">0</b><span>物品总数</span></div>
       <div class="stat"><b id="st-used">0</b><span>已盘活</span></div>
@@ -859,10 +859,26 @@ function renderTime(){
 
 /* ============ 初始化 ============ */
 renderLib();buildPoolChips();drawWheel();renderRem();renderRec();renderTime();
+
+/* ============ 每日 00:00 自动重置提醒 ============ */
+/* checkins 按天存储（{id,date}），跨过 00:00 后重渲染即让所有物品回到
+   “标记用”原始状态，按当天重新计算。页面常驻过夜时也能自动刷新。 */
+function scheduleMidnightReset(){
+  const now=new Date();
+  const next=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,0,0); // 次日 00:00:00
+  const ms=next-now;
+  setTimeout(()=>{
+    renderRem();                 // 静默重算：今日标记清空，回到原始状态
+    scheduleMidnightReset();     // 排下一天
+  }, ms);
+}
+scheduleMidnightReset();
+// 切回前台 / 解锁时也重算（覆盖后台跨天 setTimeout 被节流的情况）
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) renderRem(); });
 </script>
 <script>
 (function(){
-  var APP_VER='v1.6';
+  var APP_VER='v1.7';
   var m=document.createElement('link');m.rel='manifest';m.href='manifest.webmanifest';document.head.appendChild(m);
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').then(function(reg){
