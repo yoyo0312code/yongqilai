@@ -350,6 +350,13 @@ const baseItems=[
 let items=baseItems.slice();
 let added=JSON.parse(localStorage.getItem('added')||'[]');
 let checkins=JSON.parse(localStorage.getItem('checkins')||'[]');
+// 去重：同一天同一物品只保留一条（清理历史重复记录）
+(function(){
+  const seen=new Set(),out=[];let dup=0;
+  checkins.forEach(c=>{const k=(c.id)+'@'+(c.date);if(seen.has(k)){dup++;return;}seen.add(k);out.push(c);});
+  checkins=out;
+  if(dup)localStorage.setItem('checkins',JSON.stringify(checkins));
+})();
 let deleted=JSON.parse(localStorage.getItem('deleted')||'[]');
 let overrides=JSON.parse(localStorage.getItem('overrides')||'{}');
 items=items.filter(it=>!deleted.includes(it.id));
