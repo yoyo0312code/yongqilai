@@ -172,18 +172,30 @@
     background:var(--ink);color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;
     opacity:0;transition:opacity .3s;z-index:20;pointer-events:none;}
   .toast.show{opacity:.95;}
+
+  /* 分享按钮 + 分享面板 */
+  .share-btn{display:block;margin:14px auto 0;background:#fff;color:var(--ink);
+    border:1.5px solid rgba(255,255,255,.7);border-radius:22px;padding:10px 20px;
+    font-size:13.5px;font-family:inherit;font-weight:600;cursor:pointer;
+    box-shadow:0 3px 10px rgba(120,110,100,.18);}
+  .share-btn:active{transform:translateY(1px);}
+  .qr-box{display:flex;justify-content:center;margin:10px 0 4px;}
+  .qr-img{width:180px;height:180px;background:#fff;border-radius:12px;padding:8px;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+  .share-link{font-size:12.5px;word-break:break-all;background:rgba(120,110,100,.08);
+    border-radius:10px;padding:9px 11px;color:var(--ink);line-height:1.5;}
 </style>
 </head>
 <body>
 <div class="phone">
   <header>
     <h1>用起来 🌿</h1>
-    <p>把闲置物品，重新拉回生活流 · v1.5</p>
+    <p>把闲置物品，重新拉回生活流 · v1.6</p>
     <div class="stats">
       <div class="stat"><b id="st-items">0</b><span>物品总数</span></div>
       <div class="stat"><b id="st-used">0</b><span>已盘活</span></div>
       <div class="stat"><b id="st-streak">0</b><span>连续天数</span></div>
     </div>
+    <button class="share-btn" id="share-btn">📤 分享给朋友</button>
   </header>
 
   <main>
@@ -274,6 +286,7 @@
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="qrcode.min.js"></script>
 <script>
 /* ============ 种子数据（你的 26 件真实清单） ============ */
 const EMO={文具:'🖊️',数码:'📱',养生:'🌿',运动:'🏃',休闲:'🎲'};
@@ -520,6 +533,48 @@ function saveEdit(id){
 function closeSheet(){$('#mask').classList.remove('show');}
 $('#mask').addEventListener('click',e=>{if(e.target.id==='mask')closeSheet();});
 
+/* ============ 分享给朋友（二维码 + 复制链接） ============ */
+function shareURL(){
+  let base=location.origin+location.pathname;
+  base=base.replace(/index\.html(\?.*)?$/,'');
+  if(!base.endsWith('/'))base+='/';
+  return base+'#fresh';
+}
+function fallbackCopy(url,done){
+  const ta=document.createElement('textarea');ta.value=url;
+  ta.style.position='fixed';ta.style.top='-9999px';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');done();}catch(e){toast('请长按手动复制链接');}
+  document.body.removeChild(ta);
+}
+function copyShare(url){
+  const done=()=>toast('已复制链接 ✓ 去微信发给朋友');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(done).catch(()=>fallbackCopy(url,done));
+  }else fallbackCopy(url,done);
+}
+function openShare(){
+  const url=shareURL();
+  let qrImg='';
+  try{
+    const qr=qrcode(0,'M');qr.addData(url);qr.make();
+    qrImg=qr.createDataURL(8,6);
+  }catch(e){ qrImg=''; }
+  $('#sheet').innerHTML=`
+    <h3>📤 分享给朋友</h3>
+    <div class="meta">朋友打开只看到「大疆相机」示例，自己加闲置——数据互不串，不影响你。</div>
+    <div class="qr-box">${qrImg?`<img src="${qrImg}" class="qr-img" alt="二维码">`:'<div class="meta">二维码生成失败</div>'}</div>
+    <div class="meta" style="text-align:center;margin:2px 0 8px;">微信 / 手机扫码，或点下方复制链接</div>
+    <div class="share-link" id="share-link">${url}</div>
+    <div class="acts">
+      <button class="act-use" id="copy-btn">📋 复制链接</button>
+      <button class="act-close" onclick="closeSheet()">关闭</button>
+    </div>`;
+  $('#copy-btn').addEventListener('click',()=>copyShare(url));
+  $('#mask').classList.add('show');
+}
+$('#share-btn').addEventListener('click',openShare);
+
 function useItem(id){
   const t=todayStr();
   if(!checkins.some(c=>c.id===id&&c.date===t))checkins.push({id,date:t});
@@ -537,6 +592,7 @@ function toggleUse(id){
   renderLib();renderRem();renderRec();
 }
 window.useItem=useItem;window.closeSheet=closeSheet;window.deleteItem=deleteItem;window.toggleUse=toggleUse;
+window.openShare=openShare;window.copyShare=copyShare;
 window.toggleEdit=toggleEdit;window.saveEdit=saveEdit;
 function deleteItem(id){
   const it=items.find(x=>x.id===id);if(!it)return;
@@ -806,7 +862,7 @@ renderLib();buildPoolChips();drawWheel();renderRem();renderRec();renderTime();
 </script>
 <script>
 (function(){
-  var APP_VER='v1.5';
+  var APP_VER='v1.6';
   var m=document.createElement('link');m.rel='manifest';m.href='manifest.webmanifest';document.head.appendChild(m);
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').then(function(reg){

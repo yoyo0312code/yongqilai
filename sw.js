@@ -1,7 +1,8 @@
-const CACHE = 'yongqilai-v4';
+const CACHE = 'yongqilai-v5';
 const ASSETS = [
   './',
   './index.html',
+  './qrcode.min.js',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png'
