@@ -47,6 +47,8 @@
   .item .pool{display:inline-block;font-size:10px;color:var(--brand2);font-weight:600;margin-top:6px;margin-left:6px;vertical-align:middle;}
   .add-card{border:2px dashed var(--brand);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--brand);cursor:pointer;}
   .add-card .emo{font-size:24px;} .add-card .nm{color:var(--brand);margin-top:4px;}
+  .fresh-note{grid-column:1/-1;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;
+    border-radius:14px;padding:11px 13px;font-size:12px;line-height:1.5;box-shadow:0 4px 14px rgba(120,110,100,.12);}
   .badge{position:absolute;top:8px;right:8px;font-size:9px;padding:2px 6px;border-radius:8px;color:#fff;}
   .b-both{background:var(--green);} .b-reminder{background:var(--accent);} .b-record{background:var(--sub);}
 
@@ -356,7 +358,10 @@ const baseItems=[
 ];
 
 /* ============ 状态 ============ */
-let items=baseItems.slice();
+// 分享示例模式：URL 带 ?fresh=1 时，初始清单只保留大疆相机，给朋友当起点
+const FRESH = (new URLSearchParams(location.search).get('fresh')==='1');
+let items = FRESH ? [JSON.parse(JSON.stringify(baseItems.find(x=>x.id===5)||baseItems[4]))]
+                  : baseItems.slice();
 let added=JSON.parse(localStorage.getItem('added')||'[]');
 let checkins=JSON.parse(localStorage.getItem('checkins')||'[]');
 // 去重：同一天同一物品只保留一条（清理历史重复记录）
@@ -394,6 +399,11 @@ $('#nav').addEventListener('click',e=>{
 /* ============ 物品库 ============ */
 function renderLib(){
   const g=$('#lib-grid');g.innerHTML='';
+  if(FRESH){
+    const note=document.createElement('div');note.className='fresh-note';
+    note.textContent='📷 示例：从你的大疆相机开始，点「+ 新增物品」加入你自己的闲置好物吧～';
+    g.appendChild(note);
+  }
   items.forEach(it=>{
     const ch=it.channel==='both'?'b-both':it.channel==='reminder'?'b-reminder':'b-record';
     const chTxt=it.channel==='both'?'提醒+抽签':it.channel==='reminder'?'仅提醒':'仅记录';
@@ -790,10 +800,9 @@ renderLib();buildPoolChips();drawWheel();renderRem();renderRec();renderTime();
 <script>
 (function(){
   var APP_VER='v1.4';
-  var q=location.search;
-  var m=document.createElement('link');m.rel='manifest';m.href='manifest.webmanifest'+q;document.head.appendChild(m);
+  var m=document.createElement('link');m.rel='manifest';m.href='manifest.webmanifest';document.head.appendChild(m);
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('sw.js'+q).then(function(reg){
+    navigator.serviceWorker.register('sw.js').then(function(reg){
       function prompt(){
         var t=document.getElementById('toast');
         if(!t)return;
