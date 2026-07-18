@@ -358,8 +358,11 @@ const baseItems=[
 ];
 
 /* ============ 状态 ============ */
-// 分享示例模式：URL 带 ?fresh=1 时，初始清单只保留大疆相机，给朋友当起点
-const FRESH = (new URLSearchParams(location.search).get('fresh')==='1');
+// 分享示例模式：初始清单只保留大疆相机，给朋友当起点
+// 兼容两种入口：?fresh=1（普通浏览器）和 #fresh（微信更稳，避免 ?= 被微信吞掉打不开）
+const _freshQ = new URLSearchParams(location.search).get('fresh')==='1';
+const _freshH = /(^|[#&])fresh\b/.test(location.hash);
+const FRESH = _freshQ || _freshH;
 let items = FRESH ? [JSON.parse(JSON.stringify(baseItems.find(x=>x.id===5)||baseItems[4]))]
                   : baseItems.slice();
 let added=JSON.parse(localStorage.getItem('added')||'[]');
