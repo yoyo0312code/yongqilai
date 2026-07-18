@@ -1,1 +1,20 @@
+# 生成脚本（本地工具，不需要提交）
 gen_icon.py
+
+# ====== 密钥 / 凭证（绝对不能提交） ======
+.env
+*.env
+.env.local
+.env.*.local
+
+# Gitee / GitHub 令牌文件
+*.token
+*.key
+credentials.json
+
+# ====== 构建产物 / 临时文件 ======
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
