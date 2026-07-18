@@ -104,6 +104,9 @@
   .rec-card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:10px;
     box-shadow:0 2px 8px rgba(0,0,0,.04);}
   .rec-card .d{font-size:13px;font-weight:600;margin-bottom:6px;}
+  .rec-count{display:inline-block;margin-left:6px;background:linear-gradient(135deg,var(--brand),var(--brand2));
+    color:#fff;font-size:11px;font-weight:600;border-radius:10px;padding:2px 9px;vertical-align:middle;
+    box-shadow:0 2px 6px rgba(120,110,100,.12);}
   .rec-card .pill{display:inline-block;background:var(--bg);border-radius:8px;
     font-size:11px;padding:3px 8px;margin:3px 4px 0 0;}
 
@@ -640,9 +643,12 @@ function renderRec(){
   const dates=Object.keys(byDate).sort().reverse();
   if(dates.length===0){list.innerHTML='<p style="color:var(--sub);font-size:13px;">还没有记录，去物品库点「标记今天用了」试试 👀</p>';return;}
   dates.forEach(dt=>{
-    const names=byDate[dt].map(id=>items.find(x=>x.id===id)?.name||'物品').join('、');
+    const ids=byDate[dt];
+    const names=ids.map(id=>items.find(x=>x.id===id)?.name||'物品').join('、');
+    const n=ids.length, isToday=dt===todayStr();
+    const label=isToday?`🌟 今天盘活 ${n} 件，棒棒哒！`:`🌿 这天点亮 ${n} 件`;
     const d=document.createElement('div');d.className='rec-card';
-    d.innerHTML=`<div class="d">${dt}　${dt===todayStr()?'（今天）':''}</div>
+    d.innerHTML=`<div class="d">${dt}　${isToday?'（今天）':''} <span class="rec-count">${label}</span></div>
       <div><span class="pill">${names}</span></div>`;
     list.appendChild(d);
   });
