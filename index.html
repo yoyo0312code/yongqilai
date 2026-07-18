@@ -109,6 +109,12 @@
     box-shadow:0 2px 6px rgba(120,110,100,.12);}
   .rec-card .pill{display:inline-block;background:var(--bg);border-radius:8px;
     font-size:11px;padding:3px 8px;margin:3px 4px 0 0;}
+  .week-stat{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;
+    border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 4px 14px rgba(120,110,100,.14);}
+  .week-stat .ws-h{font-size:12px;opacity:.9;margin-bottom:6px;}
+  .week-stat .ws-main{font-size:17px;font-weight:700;}
+  .week-stat .ws-main b{font-size:26px;margin:0 2px;}
+  .week-stat .ws-sub{font-size:11px;opacity:.92;margin-top:6px;}
 
   /* 新增表单 */
   .field{margin-bottom:12px;}
@@ -638,15 +644,35 @@ function streak(){
 }
 function renderRec(){
   const list=$('#rec-list');list.innerHTML='';
+  // ===== 每周盘点（周一到周日）=====
+  const md=s=>{const p=s.split('-');return (+p[1])+'/'+(+p[2]);};
+  const mondayOf=s=>{const dt=new Date(s+'T00:00:00Z');const day=(dt.getUTCDay()+6)%7;dt.setUTCDate(dt.getUTCDate()-day);return dt.toISOString().slice(0,10);};
+  const addDays=(s,n)=>{const dt=new Date(s+'T00:00:00Z');dt.setUTCDate(dt.getUTCDate()+n);return dt.toISOString().slice(0,10);};
+  const t=todayStr();
+  const ws=mondayOf(t), we=addDays(ws,6);
+  const ls=addDays(ws,-7), le=addDays(ws,-1);
+  const cnt=(a,b)=>{const ids=new Set();checkins.forEach(c=>{if(c.date>=a&&c.date<=b)ids.add(c.id);});return ids.size;};
+  const dayCnt=(a,b)=>{const ds=new Set();checkins.forEach(c=>{if(c.date>=a&&c.date<=b)ds.add(c.date);});return ds.size;};
+  const n=cnt(ws,we), ln=cnt(ls,le), dactive=dayCnt(ws,we);
+  const wc=document.createElement('div');wc.className='week-stat';
+  wc.innerHTML=`<div class="ws-h">📊 本周盘点（${md(ws)}–${md(we)}）</div>
+    <div class="ws-main">本周盘活 <b>${n}</b> 样物品 🌟</div>
+    <div class="ws-sub">上周 ${ln} 样 · 本周已活跃 ${dactive} 天</div>`;
+  list.appendChild(wc);
+  // ===== 每日记录 =====
   const byDate={};
   checkins.forEach(c=>{(byDate[c.date]=byDate[c.date]||[]).push(c.id);});
   const dates=Object.keys(byDate).sort().reverse();
-  if(dates.length===0){list.innerHTML='<p style="color:var(--sub);font-size:13px;">还没有记录，去物品库点「标记今天用了」试试 👀</p>';return;}
+  if(dates.length===0){
+    const p=document.createElement('p');p.style.cssText='color:var(--sub);font-size:13px;margin-top:6px;';
+    p.textContent='还没有每日记录，去物品库点「标记今天用了」试试 👀';
+    list.appendChild(p);return;
+  }
   dates.forEach(dt=>{
     const ids=byDate[dt];
     const names=ids.map(id=>items.find(x=>x.id===id)?.name||'物品').join('、');
-    const n=ids.length, isToday=dt===todayStr();
-    const label=isToday?`盘活 ${n} 件，我真棒！🌟`:`盘活 ${n} 件 🌿`;
+    const n2=ids.length, isToday=dt===todayStr();
+    const label=isToday?`盘活 ${n2} 件，我真棒！🌟`:`盘活 ${n2} 件 🌿`;
     const d=document.createElement('div');d.className='rec-card';
     d.innerHTML=`<div class="d"><span>${dt}　${isToday?'（今天）':''}</span><span class="rec-count">${label}</span></div>
       <div><span class="pill">${names}</span></div>`;
